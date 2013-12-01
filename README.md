@@ -1,6 +1,10 @@
 # azondi
 
-Uses the [Communicating Sequential Processes](http://en.wikipedia.org/wiki/Communicating_sequential_processes) also known as asyncronous programming to process real time sensor data in clojure for [opensensors.io](http://opensensors.io)
+Uses the [Communicating Sequential Processes](http://en.wikipedia.org/wiki/Communicating_sequential_processes) also known as asyncronous programming to process real time sensor data in clojure for [opensensors.io](http://opensensors.io).  We rely on clojure's core.async library heavily.
+
+azondi takes a continous stream of messages from the test Mosquitto MQTT broker and creating an [MQTT bridge](https://github.com/OpenSensorsIO/azondi/blob/master/src/azondi/mqtt.clj). Using Server Side Events the data is pushed to the (browser)[https://github.com/OpenSensorsIO/azondi/blob/master/src/azondi/core.clj]
+
+Clojurescript is then used to build the dataflow to process the data in the browser.
 
 ## Incubated with Jig
 
@@ -8,10 +12,13 @@ Writing 'quick and dirty' Clojure back-ends is fun, simple and easy. When Clojur
 
 Therefore, this project is incubated with [Jig](https://github.com/juxt/jig). Jig pushes a separation of concerns into configurable components, while retaining the rapid development environment Clojure developers are used to. Jig is designed to be optional at deployment time.
 
-Further documentation on the azondi development workflow using JIG can be found [here](Jig)
+Further documentation on the azondi development workflow using JIG can be found [here](JIG.md)
+
 ## Usage
 
 This is still an early version not quite read for production use.
+
+We are using azondi to process sensor data on extremely large volumes and in a distributed manner.  It is still in development but we welcome any feedback.
 
 ## License
 
