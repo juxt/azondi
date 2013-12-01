@@ -16,7 +16,7 @@
    }
 
   :opensensors/mosquitto-bridge
-  {:jig/component opensensors.mqtt/MqttBridge
+  {:jig/component azondi.mqtt/MqttBridge
    :jig/project "../azondi/project.clj"
    :uri "tcp://test.mosquitto.org:1883"
    :topics ["bbc/livetext/#"
@@ -24,27 +24,27 @@
    }
 
   :opensensors/opensensors-bridge
-  {:jig/component opensensors.mqtt/MqttBridge
-   :jig/project "../mqtt.opensensors.io/project.clj"
+  {:jig/component azondi.mqtt/MqttBridge
+   :jig/project "../azondi/project.clj"
 ;; :uri "tcp://adl-rabbitmq.juxt.pro:1883"
    :uri "tcp://mqtt.opensensors.io:1883"
    :topics ["#"]
    }
 
   :opensensors/sse-bridge
-  {:jig/component opensensors.core/ServerSentEventBridge
-   :jig/project "../mqtt.opensensors.io/project.clj"
+  {:jig/component azondi.core/ServerSentEventBridge
+   :jig/project "../azondi/project.clj"
    :jig/dependencies [:opensensors/opensensors-bridge :opensensors/mosquitto-bridge :opensensors/dummy-event-generator]
    :inputs [[:opensensors/opensensors-bridge :channel]
             [:opensensors/mosquitto-bridge :channel]
             [:opensensors/dummy-event-generator :channel]
             ]}
 
-:opensensors/stencil-loader
+  :opensensors/stencil-loader
   {:jig/component jig.web.stencil/StencilLoader}
 
   :opensensors/service
-  {:jig/component opensensors.core/WebServices
+  {:jig/component azondi.core/WebServices
    :jig/project "../azondi/project.clj"
    :jig/dependencies [:opensensors/web :opensensors/sse-bridge :opensensors/stencil-loader :cljs-server]
    :jig/stencil-loader :opensensors/stencil-loader
@@ -52,7 +52,7 @@
    :static-path "../azondi/public"
    }
 
-:cljs-builder
+  :cljs-builder
   {:jig/component jig.cljs/Builder
    :jig/project "../azondi/project.clj"
    :output-dir "../azondi/target/js"
@@ -63,9 +63,19 @@
 ;; :clean-build true
    }
 
+   :cljs-server
+  {:jig/component jig.cljs/FileServer
+   :jig/dependencies [:cljs-builder :opensensors/web]
+   :jig.web/context "/js"
+   }
 
-   :opensensors/dummy-event-generator
- {:jig/component opensensors.dummy/DummyEventGenerator
+  :opensensors/scheduled-thread-pool
+  {:jig/component azondi.core/ScheduledThreadPool
+   :jig/project "../azondi/project.clj"
+   }
+
+  :opensensors/dummy-event-generator
+  {:jig/component azondi.dummy/DummyEventGenerator
    :jig/project "../azondi/project.clj"
    :jig/dependencies [:opensensors/scheduled-thread-pool]
    :delay-in-ms 1000
