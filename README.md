@@ -2,9 +2,9 @@
 
 Uses the [Communicating Sequential Processes](http://en.wikipedia.org/wiki/Communicating_sequential_processes) also known as asyncronous programming to process real time sensor data in clojure for [opensensors.io](http://opensensors.io).  We rely on clojure's core.async library heavily.
 
-azondi takes a continous stream of messages from the test Mosquitto MQTT broker and creating an [MQTT bridge](https://github.com/OpenSensorsIO/azondi/blob/master/src/azondi/mqtt.clj). Using Server Side Events the data is pushed to the [browser](https://github.com/OpenSensorsIO/azondi/blob/master/src/azondi/core.clj)
+azondi takes a continous stream of messages from the test Mosquitto MQTT broker and creates an [MQTT bridge](https://github.com/OpenSensorsIO/azondi/blob/master/src/azondi/mqtt.clj). Using Server Side Events the data is pushed to the [browser](https://github.com/OpenSensorsIO/azondi/blob/master/src/azondi/core.clj).
 
-Clojurescript is then used to build the dataflow to process the data in the browser.
+Clojurescript builds the dataflow model on which processes the data in the browser.
 
 ## Incubated with Jig
 
