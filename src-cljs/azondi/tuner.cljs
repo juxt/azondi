@@ -1,7 +1,8 @@
 (ns azondi.tuner
   (:require-macros
-   [cljs.core.async.macros :refer [go]
-    [dommy.macros :refer [node sel1]]])
+   [cljs.core.async.macros :refer [go]]
+   [dommy.macros :refer [node sel1]]
+   )
 
   (:require
    [goog.dom :as dom]
@@ -25,9 +26,9 @@
 
 (def stations ["radio1" "radio2" "radio3" "radio4" "radio4extra" "5live" "radioscotland" "quotes"])
 
-(let [el (sel "#stations")]
+(let [el (sel1 "#stations")]
   (doseq [s stations]
-    (append! el (str "<tr><td>" s "</td><td id=\"" "bbc/livetext/" s "\"></td></tr>"))))
+    (dommy/append! el [:tr [:td s] [:td {:id (str "bbc/livetext/" s)}]])))
 
 (defn event->clj [evt]
   (-> evt .-evt .-event_ .-data parse (js->clj :keywordize-keys true)))
