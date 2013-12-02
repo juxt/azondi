@@ -8,7 +8,7 @@
             [domina.css :refer (sel)]
             [domina.css :as ds]
             [domina.xpath :as dx]
-            [opensensors.dataflow :as dataflow]
+            [azondi.dataflow :as dataflow]
             [cljs.core.async :refer [<! put! chan mult tap]])
   (:import [goog.net Jsonp]
            [goog Uri]))

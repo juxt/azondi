@@ -16,9 +16,9 @@
       (-> system
           (assoc-in [(:jig/id config) :channel] ch))))
 
-  (start [_ {tpool :opensensors.core/scheduled-thread-pool :as system}]
+  (start [_ {tpool :azondi.core/scheduled-thread-pool :as system}]
     (let [ch (get-in system [(:jig/id config) :channel])]
-      (assert tpool (format "No thread pool registered in system (should be key %s)" :opensensors.core/scheduled-thread-pool))
+      (assert tpool (format "No thread pool registered in system (should be key %s)" :azondi.core/scheduled-thread-pool))
       (assoc system
         ::event-producer
         (.scheduleAtFixedRate tpool

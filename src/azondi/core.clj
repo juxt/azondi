@@ -16,6 +16,7 @@
    (jig Lifecycle)
    (java.util.concurrent Executors TimeUnit)))
 
+
 (defbefore radio-page [{:keys [system component] :as context}]
   (assoc context
     :response
@@ -25,7 +26,7 @@
       {}
       ))))
 
-(defbefore root-page [{:keys [system component] :as context}]
+(defbefore tuner-page [{:keys [system component] :as context}]
   (assoc context
     :response
     (ring-resp/response
@@ -34,11 +35,22 @@
       {:main "opensensors.tuner"}
       ))))
 
+(defn get-template-with-check [& args]
+  {:post [%]}
+  (apply get-template args))
+
+
+
+
+(defbefore root-page
+  [{:keys [url-for] :as context}]
+  (assoc context :response
+         (ring-resp/response "hi")))
 
 (definterceptorfn static
-  [root-path & [opts]]
+  [name root-path & [opts]]
   (interceptor/handler
-   ::static
+   name
    (fn [req]
      (ring-resp/file-response
       (codec/url-decode (get-in req [:path-params :static]))
@@ -46,8 +58,8 @@
 
 (defn bridge-events-to-sse-subscribers
   "Continuously take events from the channel and send the event to the
-  subscribers. The subscribers are supplied in an atom and those which
-  return a java.io.IOException are removed."
+subscribers. The subscribers are supplied in an atom and those which
+return a java.io.IOException are removed."
   [channels subscribers]
   (loop []
     (when-let [[msg _] (alts!! channels)]
@@ -110,7 +122,8 @@
            config
            [["/" {:get root-page}]
             ["/radio.html" {:get radio-page}]
-            ["/*static" {:get (static (:static-path config))}]
+            ["/tuner.html" {:get tuner-page}]
+            ["/*static" {:get (static ::static (:static-path config))}]
             ["/events" {:get [::events (sse/start-event-stream (partial swap! subscribers conj))]}]
             ])
           (link-to-stencil-loader config))))
