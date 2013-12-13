@@ -22,7 +22,9 @@
       (assoc system
         ::event-producer
         (.scheduleAtFixedRate tpool
-                              #(>!! ch {:topic "bbc/livetext/quotes" :payload (rand-nth (:quotes config))})
+                              #(let [quote (rand-nth (:quotes config))]
+                                 (debugf "Emiting quote: %s" quote)
+                                 (>!! ch {:topic "bbc/livetext/quotes" :payload quote}))
                               0 (:delay-in-ms config) TimeUnit/MILLISECONDS))))
 
   (stop [_ {p ::event-producer :as system}]

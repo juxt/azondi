@@ -16,31 +16,18 @@
    (jig Lifecycle)
    (java.util.concurrent Executors TimeUnit)))
 
-
-(defbefore radio-page [{:keys [system component] :as context}]
-  (assoc context
-    :response
-    (ring-resp/response
-     (stencil/render
-      (get-template system component "radio.html")
-      {}
-      ))))
-
 (defbefore tuner-page [{:keys [system component] :as context}]
   (assoc context
     :response
     (ring-resp/response
      (stencil/render
       (get-template system component "generic-page.html")
-      {:main "opensensors.tuner"}
+      {:main "azondi.tuner"}
       ))))
 
 (defn get-template-with-check [& args]
   {:post [%]}
   (apply get-template args))
-
-
-
 
 (defbefore root-page
   [{:keys [url-for] :as context}]
@@ -121,7 +108,6 @@ return a java.io.IOException are removed."
           (add-routes
            config
            [["/" {:get root-page}]
-            ["/radio.html" {:get radio-page}]
             ["/tuner.html" {:get tuner-page}]
             ["/*static" {:get (static ::static (:static-path config))}]
             ["/events" {:get [::events (sse/start-event-stream (partial swap! subscribers conj))]}]

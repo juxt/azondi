@@ -1,6 +1,6 @@
 (ns azondi.tuner
   (:require-macros
-   [cljs.core.async.macros :refer [go]]
+   [cljs.core.async.macros :refer [go go-loop]]
    [dommy.macros :refer [node sel1]]
    )
 
@@ -16,10 +16,10 @@
    [domina.xpath :as dx]
 
    [dommy.utils :as utils]
-   [dommy.core :as dommy]
+   [dommy.core :as d]
 
    [azondi.dataflow :as dataflow]
-   [cljs.core.async :refer [<! put! chan mult tap]])
+   [cljs.core.async :refer [<! put! chan mult tap timeout]])
 
   (:import [goog.net Jsonp]
            [goog Uri]))
@@ -28,7 +28,7 @@
 
 (let [el (sel1 "#stations")]
   (doseq [s stations]
-    (dommy/append! el [:tr [:td s] [:td {:id (str "bbc/livetext/" s)}]])))
+    (d/append! el [:tr [:td s] [:td {:id (str "bbc/livetext/" s)}]])))
 
 (defn event->clj [evt]
   (-> evt .-evt .-event_ .-data parse (js->clj :keywordize-keys true)))
@@ -79,13 +79,13 @@ table cell to the latest payload for that radio station."
      (loop [log (list)]
        (let [evt (<! ch)
              log (take 10 (conj log [(:topic evt) (:payload evt)]))]
-         (dommy/replace-contents!
+         (d/replace-contents!
           messages-el
           (for [[topic payload] log]
             [:tr [:td topic][:td payload]]))
          (recur log))))))
 
-(defn trigger-animation [ch]
+#_(defn trigger-animation [ch]
   (let [anim (sel1 "#animMessageArrival")
         txt (sel1 "#mqttMessageText")]
     (go
@@ -99,7 +99,7 @@ table cell to the latest payload for that radio station."
 
 (def default-duration "0.25s")
 
-(defn trigger-subscribing-animation
+#_(defn trigger-subscribing-animation
   [ch]
   (let [path-id "device-mqtt-subscribe-path"
         mpath (.createElement js/document "mpath")
@@ -124,15 +124,15 @@ table cell to the latest payload for that radio station."
                  [:circle {:cx 0 :cy 0 :r 8 :fill "red" :stroke "black"}]
                  anim])]
 
-    (dommy/hide! g)
-    (listen! anim "beginEvent" (fn [_] (dommy/show! g)))
-    (listen! anim "endEvent" (fn [_] (dommy/hide! g)))
-    (dommy/append! parent g)
+    (d/hide! g)
+    (listen! anim "beginEvent" (fn [_] (d/show! g)))
+    (listen! anim "endEvent" (fn [_] (d/hide! g)))
+    (d/append! parent g)
 
     ;; Add an info panel
     (let [message-el (node [:text {:font-family "monospace" :font-size 14 :x 120 :y 60} "(message)"])
           topic-el (node [:text {:font-family "monospace" :font-size 14 :x 120 :y 80} "(topic)"])]
-      (dommy/append!
+      (d/append!
        parent
        (node [:g
               [:text {:font-family "serif" :font-size 14 :x 0 :y 60} "Last message:"] message-el
@@ -142,14 +142,14 @@ table cell to the latest payload for that radio station."
       (go
        (loop []
          (let [{:keys [topic payload]} (<! ch)]
-           (dommy/set-text! topic-el topic)
-           (dommy/set-text! message-el payload)
+           (d/set-text! topic-el topic)
+           (d/set-text! message-el payload)
            (.beginElement anim)
 
            )
          (recur))))))
 
-(defn trigger-publishing-animation
+#_(defn trigger-publishing-animation
   []
   (let [path-id "device-mqtt-publish-path"
         mpath (.createElement js/document "mpath")
@@ -174,12 +174,32 @@ table cell to the latest payload for that radio station."
                  [:circle {:cx 0 :cy 0 :r 8 :fill "red" :stroke "black"}]
                  anim])]
 
-    (dommy/hide! g)
-    (listen! anim "beginEvent" (fn [_] (dommy/show! g)))
-    (listen! anim "endEvent" (fn [_] (dommy/hide! g)))
-    (dommy/append! parent g)
+    (d/hide! g)
+    (listen! anim "beginEvent" (fn [_] (d/show! g)))
+    (listen! anim "endEvent" (fn [_] (d/hide! g)))
+    (d/append! parent g)
 
-    (dommy/listen! (sel1 "#my-device") :click (fn [evt] (.beginElement anim)))))
+    (d/listen! (sel1 "#my-device") :click (fn [evt] (.beginElement anim)))))
+
+(def rand-ints (vec (take 50 (map inc (repeatedly #(rand-int 9))))))
+
+(defn meter []
+  (d/append! (sel1 :#meter)
+             (node [:svg {:style "width: 90%; border: 0px solid red; width: 1000"}
+                    [:g {:transform "scale(0.2)"}
+                     [:rect {:x 18 :y 18 :width 404 :height 24 :stroke "black" :fill "none"}]
+                     [:rect#meterbars {:x 20 :y 20 :width 200 :height 20 :stroke "white" :fill "green"}]
+                     (for [n (range 400)]
+                       [:rect {:x (+ 20 (* 10 n)) :y 20 :width 2 :height 20 :stroke "none" :fill "white"}])]]
+
+                   ))
+  (go
+   (loop [w 200]
+     (<! (timeout 50))
+     (let [nw (if (= 7 (rand-int 12)) 400 (- w 10))]
+       (d/set-attr! (sel1 :#meterbars) :width nw)
+       (recur nw)))))
+
 
 (defn init
   "Start all the individual processes"
@@ -189,9 +209,14 @@ table cell to the latest payload for that radio station."
     (radio-table (tap mlt (chan)))
     (message-log (tap mlt (chan)))
 
-    ;; Slides are piggybacking on this right now
-    (trigger-animation (tap mlt (chan)))
-    (trigger-subscribing-animation (tap mlt (chan)))
-    (trigger-publishing-animation)))
+    ;; TODO Make a 1 cell windowed chan
+    (meter)
 
-(init)
+    ;; Slides are piggybacking on this right now
+    #_(trigger-animation (tap mlt (chan)))
+    #_(trigger-subscribing-animation (tap mlt (chan)))
+    #_(trigger-publishing-animation)))
+
+(set! (.-onload js/window)
+      (fn []
+        (init)))
