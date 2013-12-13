@@ -19,7 +19,7 @@
    [dommy.core :as d]
 
    [azondi.dataflow :as dataflow]
-   [cljs.core.async :refer [<! put! chan mult tap timeout]])
+   [cljs.core.async :refer [<! put! chan mult tap timeout sliding-buffer]])
 
   (:import [goog.net Jsonp]
            [goog Uri]))
@@ -183,7 +183,7 @@ table cell to the latest payload for that radio station."
 
 (def rand-ints (vec (take 50 (map inc (repeatedly #(rand-int 9))))))
 
-(defn meter []
+(defn meter [ch]
   (d/append! (sel1 :#meter)
              (node [:svg {:style "width: 90%; border: 0px solid red; width: 1000"}
                     [:g {:transform "scale(0.2)"}
@@ -194,9 +194,9 @@ table cell to the latest payload for that radio station."
 
                    ))
   (go
-   (loop [w 200]
-     (<! (timeout 50))
-     (let [nw (if (= 7 (rand-int 12)) 400 (- w 10))]
+   (loop [w 400]
+     (let [[msg c] (alts! [ch (timeout 50)])
+           nw (if (= c ch) 400 (- w 10))]
        (d/set-attr! (sel1 :#meterbars) :width nw)
        (recur nw)))))
 
@@ -209,8 +209,7 @@ table cell to the latest payload for that radio station."
     (radio-table (tap mlt (chan)))
     (message-log (tap mlt (chan)))
 
-    ;; TODO Make a 1 cell windowed chan
-    (meter)
+    (meter (tap mlt (chan (sliding-buffer 1))))
 
     ;; Slides are piggybacking on this right now
     #_(trigger-animation (tap mlt (chan)))
