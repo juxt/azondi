@@ -19,7 +19,7 @@
    [dommy.core :as d]
 
    [azondi.dataflow :as dataflow]
-   [cljs.core.async :refer [<! put! chan mult tap timeout sliding-buffer]])
+   [cljs.core.async :refer [<! put! chan mult tap timeout sliding-buffer filter<]])
 
   (:import [goog.net Jsonp]
            [goog Uri]))
@@ -187,7 +187,7 @@ table cell to the latest payload for that radio station."
   (let [meter-width 400]
     (d/append! (sel1 :#meter)
                (node [:svg {:style "width: 90%; border: 0px solid red; width: 1000"}
-                      [:g {:transform "scale(0.4)"}
+                      [:g {:transform "scale(0.5)"}
                        [:rect {:x 18 :y 18 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
                        [:rect#meterbars {:x 20 :y 20 :width 0 :height 20 :stroke "white" :fill "green"}]
                        (for [x (range 20 meter-width 10)]
@@ -199,6 +199,7 @@ table cell to the latest payload for that radio station."
        (loop [w meter-width]
          (let [[msg c] (alts! [ch (timeout 50)])
                nw (if (= c ch) meter-width (- w decay))]
+           ;;(when (= nw meter-width) (.log js/console msg))
            (d/set-attr! (sel1 :#meterbars) :width nw)
            (recur nw)))))))
 
@@ -211,7 +212,8 @@ table cell to the latest payload for that radio station."
     (radio-table (tap mlt (chan)))
     (message-log (tap mlt (chan)))
 
-    (meter (tap mlt (chan (sliding-buffer 1))))
+    (meter (filter< (comp (partial = "/test/quotes") :topic)
+                    (tap mlt (chan (sliding-buffer 1)))))
 
     ;; Slides are piggybacking on this right now
     #_(trigger-animation (tap mlt (chan)))
