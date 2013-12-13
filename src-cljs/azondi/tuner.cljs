@@ -184,21 +184,23 @@ table cell to the latest payload for that radio station."
 (def rand-ints (vec (take 50 (map inc (repeatedly #(rand-int 9))))))
 
 (defn meter [ch]
-  (d/append! (sel1 :#meter)
-             (node [:svg {:style "width: 90%; border: 0px solid red; width: 1000"}
-                    [:g {:transform "scale(0.2)"}
-                     [:rect {:x 18 :y 18 :width 404 :height 24 :stroke "black" :fill "none"}]
-                     [:rect#meterbars {:x 20 :y 20 :width 200 :height 20 :stroke "white" :fill "green"}]
-                     (for [n (range 400)]
-                       [:rect {:x (+ 20 (* 10 n)) :y 20 :width 2 :height 20 :stroke "none" :fill "white"}])]]
+  (let [meter-width 400]
+    (d/append! (sel1 :#meter)
+               (node [:svg {:style "width: 90%; border: 0px solid red; width: 1000"}
+                      [:g {:transform "scale(0.4)"}
+                       [:rect {:x 18 :y 18 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
+                       [:rect#meterbars {:x 20 :y 20 :width 0 :height 20 :stroke "white" :fill "green"}]
+                       (for [x (range 20 meter-width 10)]
+                         [:rect {:x x :y 20 :width 2 :height 20 :stroke "none" :fill "white"}])]]
 
-                   ))
-  (go
-   (loop [w 400]
-     (let [[msg c] (alts! [ch (timeout 50)])
-           nw (if (= c ch) 400 (- w 10))]
-       (d/set-attr! (sel1 :#meterbars) :width nw)
-       (recur nw)))))
+                     ))
+    (let [decay 20]
+      (go
+       (loop [w meter-width]
+         (let [[msg c] (alts! [ch (timeout 50)])
+               nw (if (= c ch) meter-width (- w decay))]
+           (d/set-attr! (sel1 :#meterbars) :width nw)
+           (recur nw)))))))
 
 
 (defn init

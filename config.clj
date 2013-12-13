@@ -43,7 +43,7 @@
    }
 
   :opensensors/dummy-event-generator
-  {:jig/component azondi.dummy/DummyEventGenerator
+  {:jig/component azondi.dummy/RandomQuoteGenerator
    :jig/project "../azondi/project.clj"
    :jig/dependencies [:opensensors/scheduled-thread-pool]
    :delay-in-ms 1000
@@ -74,13 +74,18 @@
     "May the Source shine upon thy nREPL!"]
    }
 
+  :opensensors/erratic-pulse
+  {:jig/component azondi.dummy/ErraticPulse
+   :jig/project "../azondi/project.clj"}
+
   :opensensors/sse-bridge
   {:jig/component azondi.core/ServerSentEventBridge
    :jig/project "../azondi/project.clj"
-   :jig/dependencies [:opensensors/opensensors-bridge :opensensors/mosquitto-bridge :opensensors/dummy-event-generator]
+   :jig/dependencies [:opensensors/opensensors-bridge :opensensors/mosquitto-bridge :opensensors/dummy-event-generator :opensensors/erratic-pulse]
    :inputs [[:opensensors/opensensors-bridge :channel]
             [:opensensors/mosquitto-bridge :channel]
             [:opensensors/dummy-event-generator :channel]
+            [:opensensors/erratic-pulse :channel]
             ]}
 
   :cljs-builder
