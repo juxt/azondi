@@ -1,7 +1,7 @@
 (ns azondi.tuner
   (:require-macros
    [cljs.core.async.macros :refer [go go-loop]]
-   [dommy.macros :refer [node sel1]]
+   [dommy.macros :refer [node sel1 by-id]]
    )
 
   (:require
@@ -183,26 +183,32 @@ table cell to the latest payload for that radio station."
 
 (def rand-ints (vec (take 50 (map inc (repeatedly #(rand-int 9))))))
 
-(defn meter [ch]
-  (let [meter-width 400]
-    (d/append! (sel1 :#meter)
-               (node [:svg {:style "width: 90%; border: 0px solid red; width: 1000"}
-                      [:g {:transform "scale(0.5)"}
-                       [:rect {:x 18 :y 18 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
-                       [:rect#meterbars {:x 20 :y 20 :width 0 :height 20 :stroke "white" :fill "green"}]
-                       (for [x (range 20 meter-width 10)]
-                         [:rect {:x x :y 20 :width 2 :height 20 :stroke "none" :fill "white"}])]]
+(defn tune [topic ch]
+  (filter< (comp (partial = topic) :topic) ch))
 
-                     ))
+(defn meter [topic ch]
+  (let [meter-width 400
+        meter (node [:rect {:x 20 :y 20 :width 0 :height 20 :stroke "white" :fill "green"}])
+        ch (tune topic ch)]
+
+    (d/prepend! (sel1 :#content)
+                (node [:svg {:style "width: 90%; border: 1px solid black; width: 600"}
+                       [:g {:transform "scale(1.0)"}
+                        [:rect {:x 18 :y 18 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
+                        meter
+                        (for [x (range 20 meter-width 10)]
+                          [:rect {:x x :y 20 :width 2 :height 20 :stroke "none" :fill "white"}])]]
+
+                      ))
+    (d/prepend! (sel1 :#content) (node [:p "Meter: " topic]))
+
     (let [decay 20]
       (go
        (loop [w meter-width]
          (let [[msg c] (alts! [ch (timeout 50)])
                nw (if (= c ch) meter-width (- w decay))]
-           ;;(when (= nw meter-width) (.log js/console msg))
-           (d/set-attr! (sel1 :#meterbars) :width nw)
+           (d/set-attr! meter :width nw)
            (recur nw)))))))
-
 
 (defn init
   "Start all the individual processes"
@@ -212,8 +218,8 @@ table cell to the latest payload for that radio station."
     (radio-table (tap mlt (chan)))
     (message-log (tap mlt (chan)))
 
-    (meter (filter< (comp (partial = "/test/quotes") :topic)
-                    (tap mlt (chan (sliding-buffer 1)))))
+    (meter "/test/quotes" (tap mlt (chan (sliding-buffer 1))))
+    (meter "/test/erratic-pulse" (tap mlt (chan (sliding-buffer 1))))
 
     ;; Slides are piggybacking on this right now
     #_(trigger-animation (tap mlt (chan)))
