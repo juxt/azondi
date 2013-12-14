@@ -8,7 +8,7 @@
 
                  ;; Back-end
                  [clojurewerkz/machine_head "1.0.0-beta1"]
-                 [clojurewerkz/cassaforte "1.2.0"]
+                 [clojurewerkz/cassaforte "1.3.0-beta5"]
                  [cheshire "5.2.0"]
 
                  ;; Front-end
