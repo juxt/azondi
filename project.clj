@@ -7,13 +7,10 @@
                  [org.clojure/core.async "0.1.256.0-1bf8cf-alpha"]
 
                  ;; Back-end
-<<<<<<< HEAD
-                 [clojurewerkz/machine_head "1.0.0-beta1"]
-                 [clojurewerkz/cassaforte "1.3.0-beta5"]
-=======
+
                  [clojurewerkz/machine_head "1.0.0-beta5"]
-                 [clojurewerkz/cassaforte "1.2.0"]
->>>>>>> 10d2d5a837ecf18acce0e85ead214f33e86e96d0
+                 [[clojurewerkz/cassaforte "1.3.0-beta5"]
+
                  [cheshire "5.2.0"]
 
                  ;; Front-end
