@@ -186,18 +186,56 @@ table cell to the latest payload for that radio station."
 (defn tune [topic ch]
   (filter< (comp (partial = topic) :topic) ch))
 
+(defn now []
+  (.now js/Date))
+
+;; state: [t cnt]
+;; ring buf: [pos nums]
+(defn counter [topic ch]
+  (let [ch (tune topic ch)
+        state (make-array 2)
+        ringbuf (make-array 2)
+        ]
+    (aset state 0 (now))
+    (aset state 1 0)
+    (aset ringbuf 0 0)
+    (aset ringbuf 1 (make-array 10))
+    (go
+     (loop []
+       (let [[msg c] (alts! [ch (timeout 100)])]
+         (if (< (now) (+ (aget state 0) 2000))
+           (condp = c
+             ;; Increment count
+             ch (aset state 1 (inc (aget state 1)))
+             nil)
+           (do
+             (.log js/console "Count in last 2000" (aget state 1))
+             ;; Store result in ring buffer
+             (aset (aget ringbuf 1) (aget ringbuf 0) (aget state 1))
+             (aset ringbuf 0 (let [pos (aget ringbuf 0)]
+                               (.log js/console "pos is" pos)
+                               (.log js/console "ringbuf length is " (.-length (aget ringbuf 1)))
+                               (if (>= pos (dec (.-length (aget ringbuf 1)))) 0 (inc pos))))
+             (.log js/console "Ringbuf" ringbuf)
+
+             ;; Advance time
+             (aset state 0 (+ (aget state 0) 2000))
+             ;; Reset count
+             (aset state 1 (condp = c ch 1 0)))))
+       (recur)))))
+
 (defn meter [topic ch]
-  (let [meter-width 400
-        meter (node [:rect {:x 20 :y 20 :width 0 :height 20 :stroke "white" :fill "green"}])
+  (let [meter-width 180
+        meter (node [:rect {:x 0 :y 0 :width meter-width :height 20 :stroke "white" :fill "green"}])
         ch (tune topic ch)]
 
     (d/prepend! (sel1 :#content)
-                (node [:svg {:style "width: 90%; border: 1px solid black; width: 600"}
-                       [:g {:transform "scale(1.0)"}
-                        [:rect {:x 18 :y 18 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
+                (node [:svg {:width 120 :height 30 :style "border: 1px dotted black"}
+                       [:g {:transform "translate(2,2) scale(0.2)"}
+                        [:rect {:x -2 :y -2 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
                         meter
-                        (for [x (range 20 meter-width 10)]
-                          [:rect {:x x :y 20 :width 2 :height 20 :stroke "none" :fill "white"}])]]
+                        (for [x (range 10 meter-width 10)]
+                          [:rect {:x (dec x) :y 0 :width 2 :height 20 :stroke "none" :fill "white"}])]]
 
                       ))
     (d/prepend! (sel1 :#content) (node [:p "Meter: " topic]))
@@ -214,12 +252,13 @@ table cell to the latest payload for that radio station."
   "Start all the individual processes"
   []
   (let [mlt (mult (get-events))] ; multiplex the Server Sent Events, so each process can
-    (message-counter (tap mlt (chan)) (sel "#message-count"))
-    (radio-table (tap mlt (chan)))
-    (message-log (tap mlt (chan)))
+    #_(message-counter (tap mlt (chan)) (sel "#message-count"))
+    #_(radio-table (tap mlt (chan)))
+    #_(message-log (tap mlt (chan)))
 
     (meter "/test/quotes" (tap mlt (chan (sliding-buffer 1))))
     (meter "/test/erratic-pulse" (tap mlt (chan (sliding-buffer 1))))
+    (counter "/test/erratic-pulse" (tap mlt (chan 10)))
 
     ;; Slides are piggybacking on this right now
     #_(trigger-animation (tap mlt (chan)))
@@ -228,4 +267,8 @@ table cell to the latest payload for that radio station."
 
 (set! (.-onload js/window)
       (fn []
+        (let [a (make-array 10)]
+          (aset a 0 "a")
+          (.log js/console a)
+          )
         (init)))
