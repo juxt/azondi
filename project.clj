@@ -9,11 +9,11 @@
                  ;; Back-end
 
                  [clojurewerkz/machine_head "1.0.0-beta5"]
-                 [[clojurewerkz/cassaforte "1.3.0-beta5"]
-
+                 [clojurewerkz/cassaforte "1.3.0-beta5"]
                  [cheshire "5.2.0"]
 
                  ;; Front-end
                  [domina "1.0.2"]
                  [io.pedestal/pedestal.app "0.2.2"]
-                 [prismatic/dommy "0.1.1"]])
+                 [prismatic/dommy "0.1.1"]
+                )
