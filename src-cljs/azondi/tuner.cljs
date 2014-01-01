@@ -189,17 +189,21 @@ table cell to the latest payload for that radio station."
 (defn now []
   (.now js/Date))
 
+(defn make-ring-buffer [size]
+  (let [result (make-array 2)]
+    (aset result 0 0)
+    (aset result 1 (make-array size))
+    result))
+
 ;; state: [t cnt]
 ;; ring buf: [pos nums]
-(defn counter [topic ch]
+(defn counter [topic ch ringbuf]
   (let [ch (tune topic ch)
         state (make-array 2)
-        ringbuf (make-array 2)
+        ringbuf (make-ring-buffer 10)
         ]
     (aset state 0 (now))
     (aset state 1 0)
-    (aset ringbuf 0 0)
-    (aset ringbuf 1 (make-array 10))
     (go
      (loop []
        (let [[msg c] (alts! [ch (timeout 100)])]
@@ -224,9 +228,10 @@ table cell to the latest payload for that radio station."
              (aset state 1 (condp = c ch 1 0)))))
        (recur)))))
 
-(defn meter [topic ch]
+(defn meter [topic ch rb]
   (let [meter-width 180
         meter (node [:rect {:x 0 :y 0 :width meter-width :height 20 :stroke "white" :fill "green"}])
+        rate (node [:text {:x 80 :y 10} "-1"])
         ch (tune topic ch)]
 
     (d/prepend! (sel1 :#content)
@@ -235,7 +240,8 @@ table cell to the latest payload for that radio station."
                         [:rect {:x -2 :y -2 :width (+ meter-width 4) :height 24 :stroke "black" :fill "none"}]
                         meter
                         (for [x (range 10 meter-width 10)]
-                          [:rect {:x (dec x) :y 0 :width 2 :height 20 :stroke "none" :fill "white"}])]]
+                          [:rect {:x (dec x) :y 0 :width 2 :height 20 :stroke "none" :fill "white"}])]
+                       rate]
 
                       ))
     (d/prepend! (sel1 :#content) (node [:p "Meter: " topic]))
@@ -246,7 +252,17 @@ table cell to the latest payload for that radio station."
          (let [[msg c] (alts! [ch (timeout 50)])
                nw (if (= c ch) meter-width (- w decay))]
            (d/set-attr! meter :width nw)
-           (recur nw)))))))
+           (recur nw)))))
+
+    (go-loop []
+             (<! (timeout 2000))
+             (.log js/console "ringbuf is" rb)
+             (.log js/console "Setting rate to " (str (aget (aget rb 1) (dec (aget rb 0)))))
+             (d/set-text! rate (str (aget (aget rb 1) (aget rb 0))))
+             (recur)
+             )
+
+    ))
 
 (defn init
   "Start all the individual processes"
@@ -256,9 +272,12 @@ table cell to the latest payload for that radio station."
     #_(radio-table (tap mlt (chan)))
     #_(message-log (tap mlt (chan)))
 
-    (meter "/test/quotes" (tap mlt (chan (sliding-buffer 1))))
-    (meter "/test/erratic-pulse" (tap mlt (chan (sliding-buffer 1))))
-    (counter "/test/erratic-pulse" (tap mlt (chan 10)))
+    (let [rb (make-ring-buffer 10)]
+      (counter "/test/erratic-pulse" (tap mlt (chan 10)) rb)
+
+      #_(meter "/test/quotes" (tap mlt (chan (sliding-buffer 1))) (make-ring-buffer 10))
+      (meter "/test/erratic-pulse" (tap mlt (chan (sliding-buffer 1))) rb))
+
 
     ;; Slides are piggybacking on this right now
     #_(trigger-animation (tap mlt (chan)))
