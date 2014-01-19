@@ -74,6 +74,44 @@
               [:opensensors/erratic-pulse :channel]
               ]}
 
+
+  ;; MQTT broker
+
+  :mqtt-decoder
+  {:jig/component jig.netty.mqtt/MqttDecoder
+   :jig/project "../azondi/project.clj"}
+
+  :mqtt-encoder
+  {:jig/component jig.netty.mqtt/MqttEncoder
+   :jig/project "../azondi/project.clj"}
+
+  :mqtt-notification-channel
+  {:jig/component jig.async/Channel
+   :jig/project "../azondi/project.clj"
+   :buffer :dropping
+   :size 100}
+
+  :mqtt-handler
+  {:jig/component azondi.mqtt-broker/NettyMqttHandler
+   :jig/project "../azondi/project.clj"
+   :jig/dependencies [:mqtt-notification-channel]
+   }
+
+  :mqtt-server
+  {:jig/component jig.netty/Server
+   :jig/dependencies [:mqtt-decoder :mqtt-encoder :mqtt-handler]
+   :jig/project "../azondi/project.clj"
+   :port 1883}
+
+  :mqtt-web-socket-bridge
+  {:jig/component azondi.core/MqttWebSocketBridge
+   :jig/project "../azondi/project.clj"
+   :jig/dependencies [:mqtt-notification-channel]
+   }
+
+
+  ;; ClojureScript
+
   :cljs-builder
   {:jig/component jig.cljs-builder/Builder
    :jig/project "../azondi/project.clj"
@@ -81,8 +119,6 @@
    :output-to "../azondi/target/js/main.js"
    :source-map "../azondi/target/js/main.js.map"
    :optimizations :none
-   ;;   :pretty-print true
-   ;;   :clean-build true
    }
 
   :cljs-server
@@ -91,6 +127,7 @@
    :jig.web/context "/js/"
    }
 
+  ;; Web services
 
   :opensensors/service
   {:jig/component azondi.core/WebServices
@@ -103,7 +140,7 @@
   :opensensors/routing
   {:jig/component jig.bidi/Router
    :jig/project "../azondi/project.clj"
-   :jig/dependencies [:cljs-server :opensensors/service]
+   :jig/dependencies [:cljs-server :mqtt-web-socket-bridge :opensensors/service]
    }
 
   :opensensors/server

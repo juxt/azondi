@@ -22,8 +22,12 @@
                  [cheshire "5.2.0"]
 
                  ;; Jig
+                 [jig/async ~jig-version]
                  [jig/cljs-builder ~jig-version]
                  [jig/bidi ~jig-version]
-                 [jig/stencil ~jig-version]]
+                 [jig/stencil ~jig-version]
+                 [jig/netty ~jig-version]
+                 [jig/netty-mqtt ~jig-version]
+                 [jig/http-kit ~jig-version]]
 
                 )

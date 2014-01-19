@@ -1,9 +1,11 @@
 (ns azondi.core
   (:require
    jig
+   [clojure.core.async :refer (go <!)]
    [clojure.java.io :as io]
    [clojure.core.async :refer (alts!!)]
    [clojure.tools.logging :refer :all]
+   [org.httpkit.server :refer (with-channel websocket? on-receive send! on-close)]
    [jig.bidi :refer (add-bidi-routes)]
    [bidi.bidi :refer (->WrapMiddleware ->Redirect ->Resources)]
    [jig.util :refer (satisfying-dependency)]
@@ -15,23 +17,26 @@
    (jig Lifecycle)
    (java.util.concurrent Executors TimeUnit)))
 
-(defn tuner-page [req]
+(defn template-page [req template-name cljs-main]
   (->
    (stencil/render
-            ((::template-loader req) "generic-page.html")
+            ((::template-loader req) template-name)
             {:title "Azondi"
-             :main "azondi.tuner"})
+             :main cljs-main})
    ring-resp/response
    (ring-resp/content-type "text/html")
    (ring-resp/charset "utf-8")))
 
-(defn hello [req]
-  (ring-resp/response "Hello World!")
-  )
+(defn tuner-page [req]
+  (template-page req "generic-page.html" "azondi.tuner"))
+
+(defn index-page [req]
+  (template-page req "generic-page.html" "azondi.index"))
 
 (defn wrap-template-loader [template-loader]
   (fn [h]
     (fn [req]
+      (println "Incoming request")
       (h (assoc req ::template-loader template-loader)))))
 
 (deftype WebServices [config]
@@ -43,9 +48,12 @@
       (-> system
           (add-bidi-routes
            config
-           ["/" [["tuner.html" (->WrapMiddleware tuner-page (wrap-template-loader template-loader))]
-                 ["hello.html" hello]
-                 ["" (->Redirect 307 tuner-page)]
+           ["/" [["" (->WrapMiddleware [["index.html" index-page]
+                                        ["tuner.html" tuner-page]]
+                                       (wrap-template-loader template-loader))]
+                 ["tuner.html" (->WrapMiddleware tuner-page
+                                       (wrap-template-loader template-loader))]
+                 ["" (->Redirect 307 index-page)]
                  ["" (->Resources {:prefix "public/"})]
                  ]]))))
   (start [_ system] system)
@@ -69,3 +77,37 @@
       (.shutdownNow tpool))
     (debugf "Stopped scheduled thread pool")
     system))
+
+;; Web sockets
+
+(defn create-receive-handler [ch]
+  (fn [data]
+    (println "Data received on channel:" data)))
+
+(def websocket-connections (atom []))
+
+(deftype MqttWebSocketBridge [config]
+  Lifecycle
+  (init [_ system] system)
+  (start [_ system]
+    (let [notifications (some (comp :channel system) (:jig/dependencies config))]
+      (when notifications
+        (go (loop []
+              (let [msg (<! notifications)]
+                (when msg
+                  (doseq [c @websocket-connections]
+                    (send! c (pr-str msg)))))
+              (recur)
+              )))
+      (-> system
+          (add-bidi-routes
+           config
+           ["/events"
+            (fn [req]
+              (with-channel req channel
+                (when (websocket? channel)
+                  (swap! websocket-connections conj channel)
+                  (send! channel "Hello!")
+                  (on-receive channel (create-receive-handler channel))
+                  (on-close channel (fn [status] (swap! websocket-connections #(remove #{channel}  %)))))))]))))
+  (stop [_ system] system))

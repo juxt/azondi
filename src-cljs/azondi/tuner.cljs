@@ -18,7 +18,6 @@
    [dommy.utils :as utils]
    [dommy.core :as d]
 
-   [azondi.dataflow :as dataflow]
    [cljs.core.async :refer [<! put! chan mult tap timeout sliding-buffer filter<]])
 
   (:import [goog.net Jsonp]
@@ -67,13 +66,7 @@ table cell to the latest payload for that radio station."
 (defn message-log
   "A CSP process which adds messages to a table"
   [ch]
-  (let [flow (dataflow/create-dataflow)
-        messages-el (sel1 "#messages")
-        ]
-    ;; We're not using this dataflow yet, but we will soon (perhaps) The
-    ;; idea is that this might be a complex UI component that needs
-    ;; incremental drawing, for example, a chart. But right now it's
-    ;; just a list of messages.
+  (let [messages-el (sel1 "#messages")]
     (go
      ;; The process keeps its state in the loop bindings
      (loop [log (list)]
@@ -283,6 +276,13 @@ table cell to the latest payload for that radio station."
     #_(trigger-animation (tap mlt (chan)))
     #_(trigger-subscribing-animation (tap mlt (chan)))
     #_(trigger-publishing-animation)))
+
+(let [ws (js/WebSocket. "ws://localhost:8000/events")]
+  (set! (.-onmessage ws)
+        (fn [ev]
+          (let [message (.-data ev)]
+            (.log js/console "A message!" message)
+            ))))
 
 (set! (.-onload js/window)
       (fn []
