@@ -18,7 +18,7 @@
 
   :opensensors/stencil-loader
   {
-   :jig/component jig.web.stencil/StencilLoader
+   :jig/component jig.stencil/StencilLoader
    :jig/project "../azondi/project.clj"}
 
 
