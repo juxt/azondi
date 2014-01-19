@@ -89,7 +89,7 @@
             ]}
 
   :cljs-builder
-  {:jig/component jig.cljs/Builder
+  {:jig/component jig.cljs-builder/Builder
    :jig/project "../azondi/project.clj"
    :output-dir "../azondi/target/js"
    :output-to "../azondi/target/js/main.js"
