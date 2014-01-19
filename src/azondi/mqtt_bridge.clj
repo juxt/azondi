@@ -1,4 +1,4 @@
-(ns azondi.mqtt
+(ns azondi.mqtt-bridge
   (:require
    jig
    [clojure.tools.logging :refer :all]
