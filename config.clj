@@ -2,20 +2,6 @@
 {:jig/components
  ;; Keys are usually keywords or strings, but can be anything (uuids, urls, ...)
  {
-  :server
-  {:jig/component jig.web.server/Component
-   :io.pedestal.service.http/port 8000
-   :io.pedestal.service.http/type :jetty
-   }
-
-  :opensensors/web
-  {:jig/component jig.web.app/Component
-   :jig/dependencies [:server]
-   :jig/scheme :http
-   :jig/hostname "localhost"
-   :jig.web/server :server
-   }
-
   :opensensors/stencil-loader
   {
    :jig/component jig.stencil/StencilLoader
@@ -30,12 +16,12 @@
             "energy/generation/realtime/intned/#"]
    }
 
-  :opensensors/opensensors-bridge
-  {:jig/component azondi.mqtt/MqttBridge
-   :jig/project "../azondi/project.clj"
-   :uri "tcp://mqtt.opensensors.io:1883"
-   :topics ["#"]
-   }
+  #_:opensensors/opensensors-bridge
+  #_{:jig/component azondi.mqtt/MqttBridge
+     :jig/project "../azondi/project.clj"
+     :uri "tcp://mqtt.opensensors.io:1883"
+     :topics ["#"]
+     }
 
   :opensensors/scheduled-thread-pool
   {:jig/component azondi.core/ScheduledThreadPool
@@ -78,15 +64,15 @@
   {:jig/component azondi.dummy/ErraticPulse
    :jig/project "../azondi/project.clj"}
 
-  :opensensors/sse-bridge
-  {:jig/component azondi.core/ServerSentEventBridge
-   :jig/project "../azondi/project.clj"
-   :jig/dependencies [:opensensors/opensensors-bridge :opensensors/mosquitto-bridge :opensensors/dummy-event-generator :opensensors/erratic-pulse]
-   :inputs [[:opensensors/opensensors-bridge :channel]
-            [:opensensors/mosquitto-bridge :channel]
-            [:opensensors/dummy-event-generator :channel]
-            [:opensensors/erratic-pulse :channel]
-            ]}
+  #_:opensensors/sse-bridge
+  #_{:jig/component azondi.core/ServerSentEventBridge
+     :jig/project "../azondi/project.clj"
+     :jig/dependencies [:opensensors/opensensors-bridge :opensensors/mosquitto-bridge :opensensors/dummy-event-generator :opensensors/erratic-pulse]
+     :inputs [[:opensensors/opensensors-bridge :channel]
+              [:opensensors/mosquitto-bridge :channel]
+              [:opensensors/dummy-event-generator :channel]
+              [:opensensors/erratic-pulse :channel]
+              ]}
 
   :cljs-builder
   {:jig/component jig.cljs-builder/Builder
@@ -95,24 +81,36 @@
    :output-to "../azondi/target/js/main.js"
    :source-map "../azondi/target/js/main.js.map"
    :optimizations :none
-;;   :pretty-print true
-;;   :clean-build true
+   ;;   :pretty-print true
+   ;;   :clean-build true
    }
 
   :cljs-server
-  {:jig/component jig.cljs/FileServer
-   :jig/dependencies [:cljs-builder :opensensors/web]
-   :jig.web/context "/js"
+  {:jig/component jig.bidi/ClojureScriptRouter
+   :jig/dependencies [:cljs-builder]
+   :jig.web/context "/js/"
    }
+
 
   :opensensors/service
   {:jig/component azondi.core/WebServices
    :jig/project "../azondi/project.clj"
-   :jig/dependencies [:opensensors/web :opensensors/sse-bridge :cljs-server :opensensors/stencil-loader]
-   :jig.web/app-name :opensensors/web
+   :jig/dependencies [#_:opensensors/sse-bridge :opensensors/stencil-loader]
    :jig/stencil-loader :opensensors/stencil-loader
-   :static-path "../azondi/public"
    :deck-js-path "../deck.js"
    }
 
-}}
+  :opensensors/routing
+  {:jig/component jig.bidi/Router
+   :jig/project "../azondi/project.clj"
+   :jig/dependencies [:cljs-server :opensensors/service]
+   }
+
+  :opensensors/server
+  {:jig/component jig.http-kit/Server
+   :jig/project "../azondi/project.clj"
+   :jig/dependencies [:opensensors/routing]
+   :port 8000
+   }
+
+  }}
